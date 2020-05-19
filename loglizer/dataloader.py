@@ -122,7 +122,7 @@ def load_HDFS(log_file, label_file=None, window='session', train_ratio=0.5, spli
             (x_train, _), (x_test, _) = _split_data(x_data, train_ratio=train_ratio, split_type=split_type)
             print('Total: {} instances, train: {} instances, test: {} instances'.format(
                   x_data.shape[0], x_train.shape[0], x_test.shape[0]))
-            return (x_train, None), (x_test, None), data_df
+            return (x_train, None), (x_test, None)
     else:
         raise NotImplementedError('load_HDFS() only support csv and npz files!')
 
