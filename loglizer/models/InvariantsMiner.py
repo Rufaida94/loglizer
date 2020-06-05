@@ -71,7 +71,7 @@ class InvariantsMiner(object):
         print(" total broken sessions list is :", np.where(y_pred == 1)[0])
 		
 		
-		data_df = pd.DataFrame((a), columns=['BlockId'])
+	data_df = pd.DataFrame((a), columns=['BlockId'])
         data_df.to_csv("foo.csv",index=None)
 
         with open('foo.csv', 'rb') as inf, open('csv1.csv', 'wb') as outf:
