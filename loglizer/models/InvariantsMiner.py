@@ -1,25 +1,24 @@
 """
 The implementation of Invariants Mining model for anomaly detection.
-
 Authors: 
     LogPAI Team
-
 Reference: 
     [1] Jian-Guang Lou, Qiang Fu, Shengqi Yang, Ye Xu, Jiang Li. Mining Invariants 
         from Console Logs for System Problem Detection. USENIX Annual Technical 
         Conference (ATC), 2010.
-
 """
 
 import numpy as np
+import pandas as pd
+import csv 
 from itertools import combinations
 from ..utils import metrics
+np.set_printoptions(threshold=np.inf)
 
 class InvariantsMiner(object):
 
     def __init__(self, percentage=0.98, epsilon=0.5, longest_invarant=None, scale_list=[1,2,3]):
         """ The Invariants Mining model for anomaly detection
-
         Attributes
         ----------
             percentage: float, percentage of samples satisfying the condition that |X_j * V_i| < epsilon
@@ -57,11 +56,45 @@ class InvariantsMiner(object):
         -------
             y_pred: ndarray, the predicted label vector of shape (num_instances,)
         """
-        
+
         y_sum = np.zeros(X.shape[0])
         for cols, theta in self.invariants_dict.items():
-            y_sum += np.fabs(np.dot(X[:, cols], np.array(theta)))
+            y_this_invariant = np.zeros(X.shape[0])
+            y_this_invariant += np.fabs(np.dot(X[:, cols], np.array(theta)))
+            y_pred_this_invariant = (y_this_invariant > 1e-6).astype(int)
+            print("Invaraint {},{} violated by sessions {}".format(cols,theta, np.nonzero(y_pred_this_invariant)))
+            #print("the session with unbroken invariants are",np.where(y_pred_this_invariant == 0)[0])
+            y_sum += y_this_invariant
         y_pred = (y_sum > 1e-6).astype(int)
+        print(y_pred)
+        print(" total unbroken sessions list is :", np.where(y_pred == 0)[0])
+        print(" total broken sessions list is :", np.where(y_pred == 1)[0])
+		
+		
+		data_df = pd.DataFrame((a), columns=['BlockId'])
+        data_df.to_csv("foo.csv",index=None)
+
+        with open('foo.csv', 'rb') as inf, open('csv1.csv', 'wb') as outf:
+            csvreader = csv.DictReader(inf)
+            fieldnames = csvreader.fieldnames + ['Label'] # add column name to beginning
+            csvwriter = csv.DictWriter(outf, fieldnames)
+            csvwriter.writeheader()
+            for node, row in enumerate(csvreader, 1):
+                csvwriter.writerow(dict(row,Label = 'Anomaly'))
+
+        b = np.array(np.where(y_pred == 0)[0])
+        data_dfb = pd.DataFrame((b), columns=['BlockId'])
+        data_dfb.to_csv("foo2.csv",index=None)
+        with open('foo2.csv', 'rb') as inf, open('csv2.csv', 'wb') as outf:
+            csvreader = csv.DictReader(inf)
+            fieldnames = csvreader.fieldnames + ['Label'] # add column name to beginning
+            csvwriter = csv.DictWriter(outf, fieldnames)
+            csvwriter.writeheader()
+            for node, row in enumerate(csvreader, 1):
+                csvwriter.writerow(dict(row,Label = 'Normal'))
+
+
+        
         return y_pred
 
     def evaluate(self, X, y_true):
@@ -73,13 +106,11 @@ class InvariantsMiner(object):
 
     def _estimate_invarant_space(self, X):
         """ Estimate the dimension of invariant space using SVD decomposition
-
         Arguments
         ---------
             X: ndarray, the event count matrix of shape num_instances-by-num_events
             percentage: float, percentage of samples satisfying the condition that |X_j * V_i| < epsilon
             epsilon: float, the threshold for estimating the invariant space
-
         Returns
         -------
             r: the dimension of invariant space
@@ -88,6 +119,7 @@ class InvariantsMiner(object):
         U, sigma, V = np.linalg.svd(covariance_matrix)  # SVD decomposition
         # Start from the right most column of matrix V, sigular values are in ascending order
         num_instances, num_events = X.shape
+        print('number of instances is', num_instances)
         r = 0
         for i in range(num_events - 1, -1, -1):
             zero_count = sum(abs(np.dot(X, U[:, i])) < self.epsilon)
@@ -100,7 +132,6 @@ class InvariantsMiner(object):
 
     def _invariants_search(self, X, r):
         """ Mine invariant relationships from X
-
         Arguments
         ---------
             X: ndarray, the event count matrix of shape num_instances-by-num_events
@@ -161,11 +192,9 @@ class InvariantsMiner(object):
     def _compute_eigenvector(self, X):
         """ calculate the smallest eigenvalue and corresponding eigenvector (theta in the paper) 
             for a given sub_matrix
-
         Arguments
         ---------
             X: the event count matrix (each row is a log sequence vector, each column represents an event)
-
         Returns
         -------
             min_vec: the eigenvector of corresponding minimum eigen value
@@ -185,12 +214,10 @@ class InvariantsMiner(object):
 
     def _check_invar_validity(self, X, selected_columns):
         """ scale the eigenvector of float number into integer, and check whether the scaled number is valid
-
         Arguments
         ---------
             X: the event count matrix (each row is a log sequence vector, each column represents an event)
             selected_columns: select columns from all column list
-
         Returns
         -------
             validity: whether the selected columns is valid
@@ -226,13 +253,11 @@ class InvariantsMiner(object):
 
     def _prune(self, valid_cols, new_item_set, search_space):
         """ prune invalid combination of columns
-
         Arguments
         ---------
             valid_cols: existing valid column list
             new_item_set: item set to be merged
             search_space: the search space that stores possible candidates
-
         """
 
         if len(valid_cols) == 0:
@@ -250,12 +275,10 @@ class InvariantsMiner(object):
 
     def _join_set(self, item_list, length):
         """ Join a set with itself and returns the n-element (length) itemsets
-
         Arguments
         ---------
             item_list: current list of columns
             length: generate new items of length
-
         Returns
         -------
             return_list: list of items of length-element
@@ -277,13 +300,11 @@ class InvariantsMiner(object):
 
     def _check_candi_valid(self, item, length, search_space):
         """ check whether an item's subitems are in searchspace
-
         Arguments
         ---------
             item: item to be checked
             length: the length of item
             search_space: the search space that stores possible candidates
-
         Returns
         -------
             True or False
@@ -293,4 +314,3 @@ class InvariantsMiner(object):
             if sorted(list(subItem)) not in search_space:
                 return False
         return True
-
