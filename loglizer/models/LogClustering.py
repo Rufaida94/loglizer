@@ -62,7 +62,11 @@ class LogClustering(object):
             min_dist, min_index = self._get_min_cluster_dist(X[i, :])
             if min_dist > self.anomaly_threshold:
                 y_pred[i] = 1
+        print(" total unbroken sessions list is :", np.where(y_pred == 0)[0])
+        print(" total broken sessions list is :", np.where(y_pred == 1)[0])
         return y_pred
+                
+               
 
     def evaluate(self, X, y_true):
         print('====== Evaluation summary ======')
